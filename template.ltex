@@ -1,0 +1,40 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[fleqn]{amsmath}
+\usepackage{graphicx}
+\usepackage{ragged2e}
+\usepackage[top=0.8in, bottom=0.8in, left=0.8in, right=0.8in]{geometry}
+
+
+\begin{document}
+\section{Ground Lab Statics}
+% for i, (desc, stat_func, plot_func, caption, flag) in enumerate(hooks):
+    % if desc:
+        \subsection{ {{desc}} }
+    % end
+    % stats = stat_func(lst, lst2)
+    % if flag:
+        \begin{flushleft}
+            % for key, val in stats.items():
+                \textbf{ {{key}} }: {{str(round(val,2))}} \linebreak
+            % end
+        \end{flushleft}
+    % end
+    % if plot_func:
+        % plot_func(stats)
+        % plt.savefig(f"plots/{i}.eps")
+        % plt.close()
+        \begin{figure}[!htb]
+            \centering
+            \makebox[0.6\textwidth]{\includegraphics[width=1\textwidth]{ {{f"plots/{i}"}} }}
+            % if caption:
+                \caption{ {{caption}} }
+            % end
+            \label{fig: {{str(round(i,2))}} }
+        \end{figure}
+    % end
+    % if desc:
+        \newpage
+    % end
+% end
+
+\end{document}

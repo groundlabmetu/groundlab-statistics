@@ -3,7 +3,8 @@ import matplotlib.pyplot as plt
 from operator import itemgetter
 from collections import defaultdict
 from helper import count_unique_iterable, filter_count, filter2, hashabledict, histogram, reverse_dict
-from datetime import date, datetime, timedelta
+from datetime import datetime
+from simple_template import template
 import pprint
 
 plt.style.use("seaborn")
@@ -30,16 +31,17 @@ fields2 = ["Sıra", "Ad", "Soyad", "TC", "Numara", "Bölüm", "Dept", "Kart No",
 hooks = []
 
 
-def hook(stat_func=None, flag=True):
+def hook(stat_func=None, flag=True, desc="", caption=""):
     def _fun(plot_func):
-        hooks.append((stat_func, plot_func, flag))
+        hooks.append((desc, stat_func, plot_func, caption, flag))
         return plot_func
     return _fun
 
 
 def generate():
     lst, lst2 = read_files()
-    for stat_func, plot_func, flag in hooks:
+    return template(open("template.ltex").read(), hooks=hooks, lst=lst, lst2=lst2, plt=plt)
+    for desc, stat_func, plot_func, flag in hooks:
         stats = stat_func(lst, lst2)
         if flag:
             pprint.pprint(stats)
@@ -76,29 +78,25 @@ def general_stats(lst, lst2):
     return stats
 
 
-@hook(general_stats)
+@hook(general_stats, desc="Genel istatistikler", caption="Aktif ve pasif üye dağılımı grafiği")
 def plot_general_stats(stats):
     plt.pie([stats["Aktif üye sayısı"], stats["Pasif üye sayısı"]], labels=["Aktif", "Pasif"], autopct="%1.1f%%")
-    plt.title("Aktif ve pasif üye dağılımı grafiği")
 
 
 def user_stats(lst, lst2):
     return histogram(map(itemgetter("İsim"), filter2(lst, "Mesaj", "İçeri Girdi")))
 
 
-@hook(user_stats)
-def plot_user_stats(stats):
-    ...
+#hook(user_stats, desc="Kullanıcı istatistikleri")(None)
 
 
 def histogram_stats(lst, lst2):
     return histogram(user_stats(lst, lst2).values())
 
 
-@hook(histogram_stats, False)
+@hook(histogram_stats, False, caption="Aktif üyelerin giriş sayısı histogramı")
 def plot_histogram_stats(stats):
-    plt.bar(list(stats.keys()), list(stats.values()))
-    plt.title("Aktif üyelerin giriş dağılımı")
+    plt.bar(list(sorted(map(str, stats.keys()), key=int)), list(stats.values()))
 
 
 def range_hist_stats(lst, lst2, r=[0, 2, 5, 10, 20, 50, 100, 200]):
@@ -111,10 +109,9 @@ def range_hist_stats(lst, lst2, r=[0, 2, 5, 10, 20, 50, 100, 200]):
     return stats
 
 
-@hook(range_hist_stats, False)
+@hook(range_hist_stats, False, caption="Belli aralıklardaki giriş sayısı dağılımı")
 def plot_range_hist_stats(stats):
     plt.pie(list(stats.values()), labels=list(map(str, stats.keys())), autopct="%1.1f%%")
-    plt.title("Aktif üyelerin giriş dağılımı")
 
 
 def lesser_hist_stats(lst, lst2, r=[0, 2, 5, 10, 20, 50, 100, 200]):
@@ -126,10 +123,9 @@ def lesser_hist_stats(lst, lst2, r=[0, 2, 5, 10, 20, 50, 100, 200]):
     return dict(stats)
 
 
-@hook(lesser_hist_stats, False)
+@hook(lesser_hist_stats, False, caption="Bir sayıdan az giriş sayısı dağılımı")
 def plot_lesser_hist_stats(stats):
     plt.bar(list(map(str, stats.keys())), list(stats.values()))
-    plt.title("Aktif üyelerin giriş dağılımı")
 
 
 def top_stats(lst, lst2):
@@ -138,10 +134,9 @@ def top_stats(lst, lst2):
     return list(filter(lambda x: x[1] >= limit, l))
 
 
-@hook(top_stats, False)
+@hook(top_stats, False, caption=f"En çok giriş yapan {TOP_COUNT} kullanıcının giriş sayıları")
 def plot_top_stats(stats):
     plt.bar(list(range(len(stats))), list(map(itemgetter(1), stats)))
-    plt.title("Aktif üyelerin giriş dağılımı")
 
 
 def user_entrance_stats(lst, lst2):
@@ -154,7 +149,7 @@ def user_entrance_stats(lst, lst2):
     return stats
 
 
-@hook(user_entrance_stats)
+@hook(user_entrance_stats, caption="En çok giriş yapan ve diğer üyelerin giriş dağılımı")
 def plot_user_entrance_stats(stats):
     plt.pie([stats[f"En çok giriş yapan {TOP_COUNT} üyenin toplam giriş sayısı"], stats["Diğer üyeler"]], labels=[
             f"En çok giriş yapan {TOP_COUNT} üye", "Diğer üyeler"], autopct="%1.1f%%")
@@ -168,7 +163,7 @@ def yonetim_stats(lst, lst2):
     return stats
 
 
-@hook(yonetim_stats)
+@hook(yonetim_stats, desc="Yönetimde olan üyeler", caption="Yönetimde olan ve diğer üyelerin giriş sayıları")
 def plot_yonetim_stats(stats):
     plt.pie([stats[f"En çok giriş yapan {TOP_COUNT} üyeden yönetimde olanların sayısı"],
              stats[f"En çok giriş yapan {TOP_COUNT} üyeden yönetimde olmayanların sayısı"]],
@@ -178,13 +173,13 @@ def plot_yonetim_stats(stats):
 def weekly_stats(lst, lst2):
     dates = list(map(lambda x: datetime.strptime(x, "%Y-%m-%d %H:%M:%S"),
                      map(itemgetter("Tarih"), filter2(lst, "Mesaj", "İçeri Girdi"))))
-    return list(sorted(histogram(map(lambda date: f"{date.year}, Week {date.week}", map(datetime.isocalendar, dates))).items()))
+    return list(sorted(histogram(map(lambda date: f"{date.year}, \n{date.week}", map(datetime.isocalendar, dates))).items()))
 
 
-@hook(weekly_stats, False)
+@hook(weekly_stats, False, caption="Haftalık giriş sayıları")
 def plot_weekly_stats(stats):
     plt.bar(list(map(itemgetter(0), stats)), list(map(itemgetter(1), stats)))
 
 
 if __name__ == "__main__":
-    generate()
+    print(generate(), file=open("out.tex", "w"))
